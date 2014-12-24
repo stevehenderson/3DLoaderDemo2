@@ -1,0 +1,154 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1265
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red154\green154\blue154;\red128\green128\blue128;\red0\green116\blue0;
+\red46\green13\blue110;\red100\green56\blue32;\red92\green38\blue153;}
+\margl1440\margr1440\vieww22800\viewh19460\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\f0\b\fs24 \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\fs48 \cf0 Cheetah 3D Loader for iOS
+\b0\fs24 \
+\
+The purpose of this code is to load a model into GPU memory from a native Cheetah 3D file, A.K.A. a .jas file. Cheetah 3D's file format is a property list, or 'plist', so it's easy to parse with classes built into Core Foundation. When added to your Xcode project, Cheetah 3D's file is easily browsed with Xcode's built-in plist editor. Opening the file in Cheetah 3D is as easy as right-clicking on it and selecting 'Open with External Editor'.\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\b\fs26 \cf0 Adding A Cheetah 3D file to Xcode
+\b0\fs24 \
+Add your Cheetah 3D file to your Xcode project as you would any other resource using the "Add files to [YourProjectName]" command. Xcode can preview your file if you 
+\b set the correct file type in Xcode's File Inspector.
+\b0  If you saved your Cheetah 3D file as binary (recommended), then click on your .jas file in the project view, then in the file inspector, select "Property List Binary" from the File Type dropdown. If you saved it as XML text (which happens when you uncheck the "Binary:" checkbox in Cheetah 3D's .jas file prefs) then select "Property List XML" from the dropdown. Either binary or XML text, Xcode can preview it. Xcode won't update its view until you click on some other file and then click back on the Cheetah 3D file. After you do, you should see it in the plist editor and Xcode will remember to treat your file as a plist. Unfortunately, this has to be done the first time you add each Cheetah 3D file to your project. I looked into creating an entry in Xcode's lookup table for file types, but I couldn't make it work. If you know how to do that, let me know.\
+\
+
+\b\fs26 Why do you want to preview the file?
+\b0\fs24 \
+A Cheetah 3D file is a plist. When you preview a plist you can examine the file's contents by digging through the structure... you know, turning little disclosure arrows to find what's hiding inside. If you want to modify or add to this loader code, you'll need to know what's in your file, especially the exact key names to programmatically find the data you're after. It's also convenient to look into the object data to see what you named the object, rather than resorting to opening the file in Cheetah 3D just because you forgot the name.\
+\
+
+\b\fs26 iOS and Cheetah 3D are totally BFFs now
+\b0\fs24 \
+By using this loader, your Cheetah 3D file is now a first-class citizen of Xcode! You can work in Cheetah 3D, save your changes like a normal human being, return to Xcode, and run. No exporting, no conversions, just go! Iterating over assets is easy. Want to change the UVs around? Go ahead. Want to tweak one little vertex? Go on, no need for a complex workaround involving exporting with special settings, processing intermediate files, compressing to binary and then loading. When making a small change requires a chain of events, you find excuses not to make the change, especially if there's a possibility of introducing an error (did I remember to tick the 'triangulate box when I exported to Collada?).\
+\
+
+\b\fs26 Cheetah 3D Preparation
+\b0\fs24 \
+Using this loader isn't completely without hitches [the most egregious issues have been resolved with recent updates]. I hate making irreversible changes to a file, but it's necessary for some things. Most of the things you need to look out for are now pretty reasonable and possibly even considered best practices. Before you bring your model over to iOS, you need to do a few tweaks 
+\b while in Cheetah 3D
+\b0  to prepare it:\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 \strike \strikec0 1. OpenGL ES won't work with a model composed of anything but triangles. Quads will crash the loader (ugh!). Use Tools>Polygon>Triangulate on your model to turn all your n-gons into triangles. I like to model and set UVs in quads, so this is a step I would do last. Triangulation while loading would be a great added feature for the loader. I'm looking into it, but any help would be appreciated. One way to handle this issue from a workflow perspective, is to keep individual models in their original files and archive them, then only add a composed scene file to Xcode with copies of all your models in it, all positioned and scaled relative to each other. Cheetah 3D then almost becomes a level editor for your game.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 \strike0\striked0 \
+UPDATED: WOOOHOO! You no longer have to tesselate (convert all polygons to triangles) in Cheetah3D. This loader version makes it possible to leave your model as quads or even a mixture of quads and triangles by automatically tessellating any quads as it loads. NOTE: any polygon composed of more than 4 sides will still crash the loader. Luckily, Cheetah 3D has a selection tool to find any that might be hiding in your model: Selection > Select nGons>4. If any polygons are selected by this tool, you need to split those into quads and/or triangles. I don\'92t think it\'92s valuable to spend time making the loader accept nGons>4, so this is as awesome as this ever gets\'85besides, I\'92ve never seen a game asset model that required pentagons, hexagons, heptagons, octagons\'85 you get the idea.\
+\
+2. Burn your transforms [optional with this update, see below*]. Open the Coords System panel with Tools>Coord System (command-shift-T). In that panel, you'll see a button labeled "Burn transform:". Click on its "OK" button and your position and rotation will be set to zero and scale set to 1. It won't move, rotate, or scale the model, but it will make it's current transform match world space. \strike \strikec0 If you have several models in a Cheetah 3D file like a house and a person, and you scaled to house up to be larger than the person, but you don't burn the transform, the house will load into iOS at it's original scale. That's because your model's transform is being used/edited in Cheetah 3D, but not on iOS.\strike0\striked0  \strike \strikec0 My loader disregards transforms, so any scaling etc. you do in Cheetah 3D is not read.\strike0\striked0  Burning your transforms applies your scaling, translation, and rotation to your model permanently \strike \strikec0 allowing it to be loaded on iOS as you intended.\strike0\striked0  \strike \strikec0 I may add transform support in the future, but it's low on my priority list right now.\strike0\striked0  \
+\
+*UPDATED: This project incorporates a virtual camera (a view matrix handled by a camera class). The loader imports all the transforms for an object and the camera loads camera transforms from the Cheetah 3D file as well. It\'92s still not a bad idea to burn your transforms in Cheetah 3D before loading in iOS, but it\'92s optional now.\
+\
+3. This one is unavoidable and a reasonable requirement: All objects need to be "made editable" in Cheetah 3D parlance. If you made a sphere, box, what-have-you using the Polygon>Ball dropdown etc., double-click on its icon in the object browser. The object will be made editable (its vertices, edges, polygons can now be selected and edited) and its icon should change into a polygon-looking thing. Non-editable objects built with Cheetah 3D properties/parameters are not something I plan to support, nor do I plan to support splines and spline-based models. To borrow a popular expression, "Nobody got time for that." This loader is expecting to load polygonal models and it's reasonable to assume your assets are all made of polygons, so parameterized objects are outside the scope of this loader.\
+\
+If you have questions or comments, feel free to contact me at:\
+\
+TheMobileDudeBlog@gmail.com\
+\
+--Jim\
+\
+--------------------------------------------------------------------------------------------------------------------------------------------\
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\b\fs26 \cf0 Changes?
+\b0\fs24 \
+I may occasionally update the loader as I add capability or efficiency, but I'm moving forward with developing my game and I want to spend more time on creating great assets and less time on this. \
+\
+
+\b\fs26 Improving this loader:\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\b0\fs24 \cf0 1. Animation/Skinning is a must and I'll be working on that at some point. Any help is appreciated.\
+\
+2. Vertex normals require a heavy calculation on the CPU because Cheetah 3D doesn't save them and I want smooth-looking assets in my game. It might be advantageous to pass 0 for normals on loading and use a normal map in the vertex shader instead. Cheetah 3D and my loader can support 2 sets of UVs, one for color and one for some other thing... in this case, normals. Seems like the best approach. Making normal maps in Cheetah 3D is pretty easy. If I update the demo project to use textures, I'll include the normal mapping material in the Cheetah 3D file. Attach the material and bake.\
+\
+3. This is done!\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf2 Burning transforms on load might be easy. All the transform data is easy to read in the plist file.\cf0 \
+\
+4. This one\'92s done!\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf3 4. This loader requires the Cheetah 3D model to be triangulated before loading. Attempting to load a model with any polygon with >3 vertices causes a crash. Triangulation while loading would remove a stinky requirement for preparing files as well as guard against accidentally crashing the app. This approach looks promising:\
+\
+Quad vertices: 1 2 3 4\
+Magic happens, then\'85\
+Triangle vertices: 1 2 3\
+Triangle vertices: 3 4 1\
+\
+If this magic is possible at load time, then maybe the requirement can be all polygons must be either triangles or quads, but no polygons with more than 4 vertices are allowed. Cheetah has a tool for selecting all n-gons >4, so this seems like a reasonable approach.\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 \
+\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\b\fs26 \cf0 UPDATES:
+\b0\fs24 \
+\'95 [NOTE: This was fixed some time ago... not an issue now] There was strangeness when I enabled backface culling. Does Cheetah 3D have a backwards winding order?[No.] Seems that way, or maybe I'm loading the data wrong [Yes], but anyway you can tell OpenGL to use a different winding order and there are other backface settings to keep in mind:\
+\
+\pard\tx529\pardeftab529\pardirnatural
+
+\f1\fs22 \cf4 \CocoaLigature0 	//glCullFace(GL_FRONT /* or GL_BACK or even GL_FRONT_AND_BACK */);\cf0 \
+    \cf5 glCullFace\cf0 (\cf6 GL_BACK\cf0 );\
+    \cf5 glEnable\cf0 (\cf6 GL_CULL_FACE\cf0 );\
+    \cf5 glFrontFace\cf0 (\cf6 GL_CW\cf0  \cf4 /* or GL_CCW */\cf0 );\cf4 //set winding order\
+\pard\tx529\pardeftab529\pardirnatural
+
+\f0\fs24 \cf0 \CocoaLigature1 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+\cf0 --------------------------------------------------------------------------------------------------------------------------------------------\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\b \cf0 \
+August 11, 2013
+\b0  \
+\'95 I continued to polish the code and break up much of the loader into classes. It's now more like a real Objective-c project instead a of a gigantic procedural blob. I was able to add support for textures by reading the UVs from the .jas file.\
+\
+\'95 If you need to add a second texture, you should be able to load the 2nd texture with GLKTextureLoader, right? However, if you add a normal map or a bump map or something "nutty", you'll need to write your own shader code to deal with it appropriately.\
+\
+--------------------------------------------------------------------------------------------------------------------------------------------\
+\
+
+\b January 22, 2014
+\b0 \
+\'95 Added auto-tessellation of quads.\
+\'95 Using 2 new models for this demo to show the new auto-tessellation feature:\
+  1) A soup can made with a mix of quads and triangles 2) A torus made entirely of quads.\
+Comment/Uncomment the appropriate lines for the model and texture in ViewController.m to see either one. \
+\
+--------------------------------------------------------------------------------------------------------------------------------------------\
+\
+
+\b February 28, 2014
+\b0 \
+\'95 Added camera class, camera and transform loading from the Cheetah 3D file. See how \
+\'95 Sometime last year I fixed the winding order issue above... just now realized it's not an issue anymore. :)\
+\'95 Added a shader class to make it easy to swap shaders. Comment/Uncomment the appropriate lines in the\
+  
+\f1\fs22 \CocoaLigature0 glkView:(\cf7 GLKView\cf0  *)view drawInRect:(\cf7 CGRect\cf0 )rect 
+\f0\fs24 \CocoaLigature1 function in ViewController.m to see either one.\
+\'95 Added gestures to this project by way of a tutorial found here: {\field{\*\fldinst{HYPERLINK "http://www.raywenderlich.com/50398/opengl-es-transformations-gestures"}}{\fldrslt http://www.raywenderlich.com/50398/opengl-es-transformations-gestures}}\
+\'95 I think the gestures should patch into the camera class instead of using their own class. Maybe someday.\
+\'95 General code polishing and improvements\
+\
+--------------------------------------------------------------------------------------------------------------------------------------------\
+\
+\
+Questions?: TheMobileDudeBlog@gmail.com\
+<EOF>\
+\
+\
+\
+\
+\
+\
+}
